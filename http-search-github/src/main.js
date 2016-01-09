@@ -27,7 +27,7 @@ function main(sources) {
       .filter(res$ => res$.request.url.indexOf(GITHUB_SEARCH_API) === 0)
       // We take the Observable doing the ajax request and transform it to do the following
       // 1) When a new request is made we send a message indicating that its loading
-      // 2) We catch any errors that occur and emit that error - this allows for requests to complete after an error
+      // 2) We catch any errors that occur and emit that error - this allows for new requests after an error
       .flatMap(x => x.startWith({msg: 'Loading...'}).catch(err => Observable.just({err})))
       // We then merge any incoming requests with a blank request for when the input field has no characters
       // This is essentially our empty state
