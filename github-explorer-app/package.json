@@ -1,0 +1,26 @@
+{
+  "name": "github-explorer-app",
+  "version": "0.0.0",
+  "private": true,
+  "author": "Zachary Siegel",
+  "license": "MIT",
+  "dependencies": {
+    "@cycle/core": "6.0.0-rc2",
+    "@cycle/dom": "8.0.0-rc2",
+    "@cycle/http": "7.0.0-rc1",
+    "rx": "4.0.6"
+  },
+  "devDependencies": {
+    "browserify": "11.0.1",
+    "babel": "5.6.x",
+    "babel-plugin-transform-react-jsx": "^6.1.x",
+    "babelify": "6.1.x",
+    "mkdirp": "0.5.x"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prebrowserify": "mkdirp dist",
+    "browserify": "browserify src/main.js -t babelify --outfile dist/main.js",
+    "start": "npm install && npm run browserify"
+  }
+}
