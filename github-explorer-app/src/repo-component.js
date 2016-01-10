@@ -5,39 +5,53 @@ import {hJSX} from '@cycle/dom';
 import {makeHTTPDriver} from '@cycle/http';
 import {isResult, isErr} from './utils'
 
-const REPO_API = 'https://api.github.com/repositories';
+const GITHUB_SEARCH_API = 'https://api.github.com/search/repositories?q=';
 const LOADING = {msg: 'Loading...', results: []};
+const EMPTY = {msg: '', results: []};
 
 function intent(DOM) {
 
-  const click$ = DOM.select('.refresh').events('click').map(ev => ev.target.value);
+  const inputFieldChange$ = DOM.select('.search-field').events('input')
+      .debounce(500)
+      .map(ev => ev.target.value);
+
+  const searchRequest$ = inputFieldChange$
+      .filter(query => query.length > 0)
+      .map(q => GITHUB_SEARCH_API + encodeURI(q));
 
   return {
-    refreshClick$: click$,
-    request$: click$.map(ev => REPO_API).startWith(REPO_API),
+    queryChange$: inputFieldChange$,
+    request$: searchRequest$
   }
 }
 
 function model(actions, HTTP) {
 
   const response$ = HTTP
-      .filter(res$ => res$.request.url === REPO_API)
-      .flatMap(x => x.catch(err => Observable.just({err})));
+      .filter(res$ => res$.request.url.indexOf(GITHUB_SEARCH_API) === 0)
+      .flatMap(x => x.startWith(LOADING).catch(err => Observable.just({err})))
+      //When the query input is 0 characters we clear results
+      .merge(actions.queryChange$.filter(query => query.length == 0).map(EMPTY))
+      .map(isResult(({body, results, msg}) => {
 
-  return response$.map(isResult(res => {
-        return {msg: '', results: res.body};
+        //If we got a response and there are no results then set a 'no results' message
+        if (body && body.items.length == 0) {
+          msg = 'No Results';
+        }
+        return {results: body ? body.items : results, msg: msg || ''}
       }))
-      .merge(actions.refreshClick$.map(LOADING))
-      .startWith(LOADING);
+      .startWith(EMPTY);
+
+  return response$;
 }
 
 function view(state$) {
 
-  const refreshButton$ = Observable.just(renderButton());
+  const refreshButton$ = Observable.just(renderInputField());
 
   const results$ = state$
       .map(isResult(({msg, results}) => renderResults(msg, results)))
-      .map(isErr(({err}) => <p>{err.message}</p>));
+      .map(isErr(({err}) => renderError(err)));
 
   return Observable.combineLatest(refreshButton$, results$, (button, results) => {
     return <div>{button}{results}</div>;
@@ -53,9 +67,14 @@ function renderResults(msg, results) {
   </div>
 }
 
-function renderButton() {
+function renderError(err) {
+  return <p>{err.message}</p>;
+}
+
+function renderInputField() {
   return <div>
-    <button className="refresh">Refresh</button>
+    <label className="label">Search</label>
+    <input type="text" className="search-field"/>
   </div>;
 }
 
